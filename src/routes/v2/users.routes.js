@@ -14,6 +14,9 @@ import {
     createUserPG,
     updateUserPG,
     deleteUserPG,
+    loginUserPG,
+    getAuthMePG,
+    logoutUserPG,
 } from "../../modules/users/users.v2.controller.js";
 
 export const router = Router();
@@ -41,6 +44,13 @@ router.delete("/:id", deleteUser);
 router.get("/pg", getUsersPG);
 
 router.post("/pg", createUserPG);
+
+// login >> check auth user >> logout | PG
+// ==================================
+router.post("/pg/login", loginUserPG);
+router.get("/pg/auth/me", authUser, getAuthMePG);
+router.post("/pg/auth/logout", authUser, logoutUserPG);
+// ==================================
 
 router.put("/pg/:id", updateUserPG);
 

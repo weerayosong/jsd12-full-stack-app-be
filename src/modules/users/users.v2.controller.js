@@ -287,9 +287,16 @@ export const createUserPG = async (req, res, next) => {
     }
 
     try {
+        const hashedPassword = await bcrypt.hash(password, 8);
+
         const { data, error } = await supabase
             .from("users")
-            .insert({ username, email, password, role: role || "user" })
+            .insert({
+                username,
+                email,
+                password: hashedPassword,
+                role: role || "user",
+            })
             .select(PG_SELECT)
             .single();
 
@@ -310,8 +317,11 @@ export const updateUserPG = async (req, res, next) => {
     const updates = {};
     if (username !== undefined) updates.username = username;
     if (email !== undefined) updates.email = email;
-    if (password !== undefined) updates.password = password;
     if (role !== undefined) updates.role = role;
+
+    if (password !== undefined) {
+        updates.password = await bcrypt.hash(password, 8);
+    }
 
     if (Object.keys(updates).length === 0) {
         return res.status(400).json({
@@ -363,4 +373,108 @@ export const deleteUserPG = async (req, res, next) => {
         // return res.status(400).json({ success: false, error: error.message });
         next(err);
     }
+};
+
+// Auth Supabase
+
+export const loginUserPG = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "400:bad request: don't have email or password",
+            });
+        }
+
+        const { data: userInDB, error } = await supabase
+            .from("users")
+            .select("id, username, email, password, role")
+            .eq("email", email)
+            .single();
+
+        if (error || !userInDB) {
+            return res.status(401).json({
+                success: false,
+                message: "401:bad-authen: wrong email or user not found",
+            });
+        }
+
+        const isMatched = await bcrypt.compare(password, userInDB.password);
+
+        if (isMatched === false) {
+            return res.status(401).json({
+                success: false,
+                message: "401:bad-authen: wrong password",
+            });
+        }
+
+        const token = jwt.sign(
+            { userId: userInDB.id },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" },
+        );
+
+        const isProd = process.env.NODE_ENV === "production";
+
+        res.cookie("accessToken", token, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            path: "/",
+            maxAge: 60 * 60 * 1000,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "200 login PG done!",
+            userInDB: {
+                id: userInDB.id,
+                username: userInDB.username,
+                email: userInDB.email,
+                role: userInDB.role,
+            },
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const getAuthMePG = async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+
+        const { data: currentUser, error } = await supabase
+            .from("users")
+            .select(PG_SELECT)
+            .eq("id", userId)
+            .single();
+
+        if (error || !currentUser) {
+            return res
+                .status(401)
+                .json({ success: false, message: "user not found in PG" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: currentUser,
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const logoutUserPG = (req, res) => {
+    res.clearCookie("accessToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== "development",
+        sameSite: "strict",
+    });
+
+    res.status(200).json({
+        success: true,
+        message: "logged out PG successfully",
+    });
 };
