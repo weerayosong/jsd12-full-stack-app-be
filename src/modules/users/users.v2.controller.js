@@ -1,6 +1,11 @@
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+
 import { User } from "./user.model.js";
 import { supabase } from "../../config/supabase.js";
-import bcrypt from "bcrypt";
+
+// import { authUser } from "../../middlewares/auth.js"; // เรียกใช้ที่ routes
+
 // MongoDB
 
 const userResponse = (doc) => {
@@ -29,12 +34,7 @@ export const createUser = async (req, res, next) => {
     }
 
     try {
-        const newUser = new User({
-            username,
-            email,
-            password,
-            role,
-        });
+        // create
         // const hashPassword = await bcrypt.hash(password, 8);
         // const doc = await User.create({
         //     username,
@@ -44,6 +44,14 @@ export const createUser = async (req, res, next) => {
         // });
         // โชว์ log of hashPassword ตอนยิง POST on REST Client
         // console.log("hashed password แล้วจ้า", hashPassword);
+
+        //save
+        const newUser = new User({
+            username,
+            email,
+            password,
+            role,
+        });
         const doc = await newUser.save();
         return res.status(201).json({ success: true, data: userResponse(doc) });
     } catch (err) {
@@ -53,17 +61,48 @@ export const createUser = async (req, res, next) => {
 };
 
 export const updateUser = async (req, res, next) => {
+    // เขียนใหม่ หลัง มี pre save ใน schema
+    // const { username, email, password, role } = req.body || {};
+    // const updates = {};
+
+    // if (username !== undefined) updates.username = username;
+    // if (email !== undefined) updates.email = email;
+
+    // if (password !== undefined) updates.password = password;
+
+    // if (role !== undefined) updates.role = role;
+
+    // if (Object.keys(updates).length === 0) {
+    //     return res.status(400).json({
+    //         success: false,
+    //         error: "At least one field is required to update",
+    //     });
+    // }
+
+    // try {
+    //     const doc = await User.findByIdAndUpdate(req.params.id, updates, {
+    //         // new: true,
+    //         returnDocument: "after",
+    //         runValidators: true,
+    //     });
+
+    //     if (!doc) {
+    //         return res
+    //             .status(404)
+    //             .json({ success: false, error: "Use not found" });
+    //     }
+
+    //     return res.status(200).json({ success: true, data: doc });
+
     const { username, email, password, role } = req.body || {};
-    const updates = {};
 
-    if (username !== undefined) updates.username = username;
-    if (email !== undefined) updates.email = email;
-
-    if (password !== undefined) updates.password = password;
-
-    if (role !== undefined) updates.role = role;
-
-    if (Object.keys(updates).length === 0) {
+    // check first มีส่งอะไรมาอัปเดตไหม
+    if (
+        username === undefined &&
+        email === undefined &&
+        password === undefined &&
+        role === undefined
+    ) {
         return res.status(400).json({
             success: false,
             error: "At least one field is required to update",
@@ -71,19 +110,25 @@ export const updateUser = async (req, res, next) => {
     }
 
     try {
-        const doc = await User.findByIdAndUpdate(req.params.id, updates, {
-            // new: true,
-            returnDocument: "after",
-            runValidators: true,
-        });
+        // ค้นหา User ตัวนั้นออกมาก่อน
+        const user = await User.findById(req.params.id);
 
-        if (!doc) {
+        if (!user) {
             return res
                 .status(404)
-                .json({ success: false, error: "Use not found" });
+                .json({ success: false, error: "User not found" });
         }
 
-        return res.status(200).json({ success: true, data: doc });
+        // อัปเดตฟิลด์ที่มีการส่งค่ามา
+        if (username !== undefined) user.username = username;
+        if (email !== undefined) user.email = email;
+        if (password !== undefined) user.password = password; // ใส่ password ดิบเข้าไป
+        if (role !== undefined) user.role = role;
+
+        // สั่ง save() เพื่อให้ pre("save") hook ทำงาน
+        const doc = await user.save();
+
+        return res.status(200).json({ success: true, data: userResponse(doc) });
     } catch (err) {
         // return res.status(400).json({ success: false, error: err });
         next(err);
@@ -120,10 +165,11 @@ export const loginUser = async (req, res, next) => {
 
         const userInDB = await User.findOne({ email }).select("+password");
 
+        // user ของเราในที่นี้คือ email
         if (!userInDB) {
             return res.status(401).json({
                 success: false,
-                message: "401 wrong email",
+                message: "401:bad-authen: wrong email",
             });
         }
 
@@ -132,21 +178,84 @@ export const loginUser = async (req, res, next) => {
         if (isMatched === false) {
             return res.status(401).json({
                 success: false,
-                message: "401 wrong password",
+                message: "401:bad-authen: wrong password",
             });
         } else {
-            const userResponse = userInDB.toObject();
-            delete userResponse.password;
+            const token = jwt.sign(
+                { userId: userInDB._id },
+                process.env.JWT_SECRET,
+                { expiresIn: "1h" },
+            ); // 1 hour expiration
+
+            const isProd = process.env.NODE_ENV === "production";
+
+            res.cookie("accessToken", token, {
+                httpOnly: true,
+                secure: isProd, // only send over HTTPS on production
+                sameSite: isProd ? "null" : "lax",
+                path: "/",
+                maxAge: 60 * 60 * 1000, // 1 hour
+            });
 
             return res.status(200).json({
                 success: true,
                 message: "200 login done!",
-                data: userResponse,
+                userInDB: {
+                    _id: userInDB._id,
+                    username: userInDB.username,
+                    email: userInDB.email,
+                    role: userInDB.role,
+                },
             });
+
+            // const userResponse = userInDB.toObject();
+            // delete userResponse.password;
+
+            // return res.status(200).json({
+            //     success: true,
+            //     message: "200 login done!",
+            //     data: userResponse,
+            // });
         }
     } catch (err) {
         next(err);
     }
+};
+
+// Check user session/token
+export const getAuthMe = async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const currentUser = await User.findById(userId);
+
+        if (!currentUser) {
+            return res
+                .status(401)
+                .json({ success: false, message: "user not found" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                _id: currentUser._id,
+                username: currentUser.username,
+                email: currentUser.email,
+                role: currentUser.role,
+            },
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const logoutUser = (req, res) => {
+    res.clearCookie("accessToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== "development",
+        sameSite: "strict",
+    });
+
+    res.status(200).json({ success: true, message: "logged out successfully" });
 };
 
 // Supabase / PostgreSQL routes (/api/v2/users/pg)

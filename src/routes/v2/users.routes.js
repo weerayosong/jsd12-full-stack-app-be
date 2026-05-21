@@ -1,11 +1,15 @@
 import { Router } from "express";
 
+import { authUser } from "../../middlewares/auth.js";
+
 import {
     getUsers,
     createUser,
     updateUser,
     deleteUser,
     loginUser,
+    getAuthMe,
+    logoutUser,
     getUsersPG,
     createUserPG,
     updateUserPG,
@@ -20,7 +24,12 @@ router.get("/", getUsers);
 
 router.post("/", createUser);
 
+// login >> check auth user >> logout
+// ==================================
 router.post("/login", loginUser);
+router.get("/auth/me", authUser, getAuthMe);
+router.post("/auth/logout", authUser, logoutUser);
+// ==================================
 
 router.put("/:id", updateUser);
 

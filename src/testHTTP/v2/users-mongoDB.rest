@@ -70,7 +70,7 @@ Content-Type: application/json
     }
 
 ### Update a user
-PUT http://localhost:3002/api/v2/users/6a0ac7e0607fc5d689a3501a
+PUT http://localhost:3002/api/v2/users/6a0b27439592bd028f3ec697
 Content-Type: application/json
 
 {
