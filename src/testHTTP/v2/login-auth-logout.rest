@@ -1,13 +1,16 @@
 @baseUrl = http://localhost:3002/api/v2/users
 
+@validEmail = o@o.com
+@validPassword = oooooooo
+
 ### createUser >> test Login
 POST {{baseUrl}}/
 Content-Type: application/json
 
 {
     "username": "ong",
-    "email": "o@o.com",
-    "password": "oooooooo",
+    "email": "{{validEmail}}",
+    "password": "{{validPassword}}",
     "role": "admin"
 }
 
@@ -17,8 +20,8 @@ POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
-    "email": "o@o.com",
-    "password": "oooooooo"
+    "email": "{{validEmail}}",
+    "password": "{{validPassword}}"
 }
 
 ### getAuthMe >> Cookie+jwt
