@@ -16,8 +16,8 @@ app.set("trust proxy", 1); // Reverse Proxy on Rener Deploy (trust)
 
 // security mw
 app.use(helmet());
-app.use(rateLimitMiddleware);
 app.use(corsMiddleware);
+app.use(rateLimitMiddleware);
 
 app.use(express.json());
 app.use(cookieParser());
