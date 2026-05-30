@@ -5,12 +5,12 @@ GET http://localhost:3002/api/v2/users
 POST http://localhost:3002/api/v2/users
 Content-Type: application/json
 
-    # {
-    #     "id": "1",
-    #     "username": "araraki",
-    #     "email": "a@a.com",
-    #     "password": "aaaaaaaa"
-    # }
+    {
+        "id": "1",
+        "username": "araragi",
+        "email": "a@a.com",
+        "password": "aaaaaaaa"
+    }
 
     # {
     #     "id": "2",
@@ -63,11 +63,11 @@ Content-Type: application/json
 #         "email": "k@k.com",
 #         "password": "kkkkkkkk"
 #     }
-{
-        "username": "nene",
-        "email": "n@n.com",
-        "password": "nnnnnnnn"
-    }
+# {
+#         "username": "nene",
+#         "email": "n@n.com",
+#         "password": "nnnnnnnn"
+#     }
 
 ### Update a user
 PUT http://localhost:3002/api/v2/users/6a0b27439592bd028f3ec697

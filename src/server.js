@@ -9,7 +9,12 @@ import { router as apiRoutes } from "./routes/index.js";
 
 const app = express();
 
-app.use(cors());
+app.use(
+    cors({
+        origin: "http://localhost:5173", // ระบุ URL ของหน้าบ้านให้ชัดเจน
+        credentials: true, // อนุญาตให้รับ-ส่ง Cookie ได้
+    }),
+);
 
 app.use(express.json());
 app.use(cookieParser());
