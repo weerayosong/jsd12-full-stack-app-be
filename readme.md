@@ -2,7 +2,7 @@
 
 Frontend Repo: https://github.com/weerayosong/jsd12-full-stack-app-fe (Branch: main)
 
-**Current Status:** The latest development progress is maintained on **Branch: phase-05_error-handling**.
+**Current Status:** The latest development progress is all done on **Branch: phase-07_deployment**.
 
 ## Project Overview
 
@@ -29,12 +29,15 @@ The project follows a phased approach, reflecting continuous refactoring and arc
     - Engineered a global, centralized error-handling middleware.
     - Ensures consistent error formatting and robust exception catching across all API endpoints, preventing server crashes and providing standard HTTP response codes.
 
-## Upcoming Roadmap
-
 - **Phase 6: Authentication & Authorization**
     - Implementation of secure user authentication protocols.
     - Integration of `bcrypt` for robust password hashing prior to database storage.
     - Development of secure session management and endpoint protection mechanisms.
+
+- **Phase 7: Security Middlewares & Deployment**
+    - Set CORS to allow Frontend UI app to API Server with cookies and token.
+    - Helmet & Rate Limiter for study to implement the security for server.
+    - Setup & prepare then deploy API Server on Render.
 
 ## Tools & Technologies
 
