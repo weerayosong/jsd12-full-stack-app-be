@@ -1,20 +1,23 @@
 import express from "express";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
-import cors from "cors";
 import { connectDB } from "./config/mongodb.js";
 import { connectSupabase } from "./config/supabase.js";
-
 import { router as apiRoutes } from "./routes/index.js";
+
+import { corsMiddleware } from "./middlewares/cors.js";
+import { rateLimitMiddleware } from "./middlewares/rateLimit.js";
 
 const app = express();
 
-app.use(
-    cors({
-        origin: "http://localhost:5173", // ระบุ URL ของหน้าบ้านให้ชัดเจน
-        credentials: true, // อนุญาตให้รับ-ส่ง Cookie ได้
-    }),
-);
+app.set("trust proxy", 1); // Reverse Proxy on Rener Deploy (trust)
+
+// security mw
+app.use(helmet());
+app.use(rateLimitMiddleware);
+app.use(corsMiddleware);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -63,11 +66,12 @@ app.use((err, req, res, next) => {
         path: req.originalUrl,
         method: req.method,
         timestamp: new Date().toISOString(),
-        stack: err.stack,
+        // not show >> stack trace on Production
+        stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
     });
 });
 
-const PORT = 3002;
+const PORT = process.env.PORT || 3002;
 
 await connectDB();
 await connectSupabase();
